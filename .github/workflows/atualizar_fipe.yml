@@ -1,0 +1,38 @@
+name: Atualizar Tabela FIPE
+
+# Quando isso vai rodar?
+on:
+  workflow_dispatch: # Permite rodar manualmente clicando num botão (bom para testes)
+  schedule:
+    - cron: '0 6 5 * *' # Roda automaticamente todo dia 5 do mês às 06:00 da manhã
+
+permissions:
+  contents: write # Dá permissão para o robô salvar o arquivo no repositório
+
+jobs:
+  coletar-dados:
+    runs-on: ubuntu-latest # Usa uma máquina Linux virtual
+
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v3
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalar dependências
+        run: |
+          pip install requests
+
+      - name: Rodar o Robô Coletor
+        run: python coletor_fipe.py
+
+      - name: Salvar os novos arquivos (Commit)
+        run: |
+          git config --global user.name "Robô FIPE"
+          git config --global user.email "robo@fipe.local"
+          git add fipe_db.json.gz version.json
+          git commit -m "Atualização automática da FIPE" || echo "Nada para atualizar"
+          git push
