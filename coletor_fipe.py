@@ -18,7 +18,7 @@ def buscar_dados():
     
     # PARA TESTE: Vamos limitar a 2 marcas para ser rápido. 
     # No real, você removeria o [:2]
-    for marca in marcas[:2]: 
+    for marca in marcas: 
         print(f"Processando marca: {marca['nome']}")
         
         dados_marca = {
@@ -33,7 +33,7 @@ def buscar_dados():
         resp_modelos = requests.get(url_modelos)
         lista_modelos = resp_modelos.json()['modelos']
         
-        for modelo in lista_modelos[:3]: # Limitando a 3 modelos para teste
+        for modelo in lista_modelos: # Limitando a 3 modelos para teste
             dados_modelo = {
                 "codigo": modelo['codigo'],
                 "nome": modelo['nome'],
