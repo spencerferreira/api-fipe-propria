@@ -1,38 +1,39 @@
 name: Atualizar Tabela FIPE
 
-# Quando isso vai rodar?
 on:
-  workflow_dispatch: # Permite rodar manualmente clicando num botão (bom para testes)
   schedule:
-    - cron: '0 6 5 * *' # Roda automaticamente todo dia 5 do mês às 06:00 da manhã
-
-permissions:
-  contents: write # Dá permissão para o robô salvar o arquivo no repositório
+    # Roda as 06:00 UTC do dia 5 de cada mês (geralmente quando a FIPE atualiza)
+    - cron: '0 6 5 * *'
+  workflow_dispatch: # Permite rodar manualmente pelo botão no GitHub
 
 jobs:
-  coletar-dados:
-    runs-on: ubuntu-latest # Usa uma máquina Linux virtual
+  fipe_etl:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Permissão para fazer commit de volta no repo
 
     steps:
-      - name: Baixar o repositório
-        uses: actions/checkout@v3
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-      - name: Instalar Python
-        uses: actions/setup-python@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
-      - name: Instalar dependências
+      - name: Instalar Dependências
         run: |
+          python -m pip install --upgrade pip
           pip install requests
 
-      - name: Rodar o Robô Coletor
-        run: python coletor_fipe.py
-
-      - name: Salvar os novos arquivos (Commit)
+      - name: Rodar Coletor ETL
         run: |
-          git config --global user.name "Robô FIPE"
-          git config --global user.email "robo@fipe.local"
-          git add fipe_db.json.gz version.json
-          git commit -m "Atualização automática da FIPE" || echo "Nada para atualizar"
-          git push
+          # Define limite de tempo para o script (opcional, o script já se controla)
+          python etl/coletor_fipe.py
+
+      - name: Commit e Push dos Resultados
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Atualização Automática FIPE [skip ci]"
+          file_pattern: 'version.json *.json.gz etl/temp_data.db'
+          push_options: '--force'
