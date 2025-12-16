@@ -2,15 +2,16 @@ name: Atualizar Tabela FIPE
 
 on:
   schedule:
-    # Roda as 06:00 UTC do dia 5 de cada mês (geralmente quando a FIPE atualiza)
+    # Roda as 06:00 UTC do dia 5 de cada mês
     - cron: '0 6 5 * *'
-  workflow_dispatch: # Permite rodar manualmente pelo botão no GitHub
+  workflow_dispatch: # Permite rodar manualmente
 
 jobs:
   fipe_etl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Permissão para fazer commit de volta no repo
+      contents: write # Para commitar arquivos
+      actions: write  # Para reiniciar o workflow (gh workflow run)
 
     steps:
       - name: Checkout do código
@@ -27,9 +28,8 @@ jobs:
           pip install requests
 
       - name: Rodar Coletor ETL
-        run: |
-          # Define limite de tempo para o script (opcional, o script já se controla)
-          python etl/coletor_fipe.py
+        id: run_etl # ID importante para recuperar a variável de saída do Python
+        run: python etl/coletor_fipe.py
 
       - name: Commit e Push dos Resultados
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -37,3 +37,12 @@ jobs:
           commit_message: "Atualização Automática FIPE [skip ci]"
           file_pattern: 'version.json *.json.gz etl/temp_data.db'
           push_options: '--force'
+
+      - name: Auto-Reinício (Se necessário)
+        # Só roda se o script Python definiu output continue_execution=true
+        if: steps.run_etl.outputs.continue_execution == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Tempo limite atingido ou trabalho pendente. Reiniciando workflow automaticamente..."
+          gh workflow run atualizar_fipe.yml
