@@ -1,13 +1,14 @@
 import os
-import time
-import json
+import timeimport json
 import gzip
 import sqlite3
 import requests
 import datetime
 
 # Configurações
-DB_FILE = "temp_data.db"
+# CORREÇÃO: Garante que o DB seja salvo na pasta 'etl/', onde o GitHub Actions espera encontrá-lo
+DB_FILE = os.path.join(os.path.dirname(__file__), "temp_data.db")
+
 API_BASE_URL = "https://veiculos.fipe.org.br/api/veiculos"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 MAX_EXECUTION_TIME_MINUTES = 340 # ~5h40m (limite de 6h do GitHub)
@@ -32,6 +33,9 @@ def get_connection():
     return sqlite3.connect(DB_FILE)
 
 def init_db():
+    # Garante que a pasta existe antes de criar o arquivo
+    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
+    
     conn = get_connection()
     c = conn.cursor()
     
@@ -121,7 +125,7 @@ def get_tabela_referencia():
     return None, None
 
 def run_etl():
-    print("Iniciando ETL...")
+    print(f"Iniciando ETL... Banco de dados em: {DB_FILE}")
     init_db()
     conn = get_connection()
     c = conn.cursor()
@@ -280,7 +284,7 @@ def generate_output_files(c, mes_ref):
     with open("version.json", "w", encoding="utf-8") as f:
         json.dump(version_data, f, indent=2)
     
-    # Exportar tabelas
+    # Exportar tabelas - Nomes simplificados (sem _relacional) para alinhar com o Android
     # Marcas
     c.execute("SELECT id, nome, tipo_veiculo FROM marcas")
     data = [{"id": r[0], "nome": r[1], "tipo": r[2]} for r in c.fetchall()]
@@ -309,4 +313,3 @@ def generate_output_files(c, mes_ref):
 
 if __name__ == "__main__":
     run_etl()
-
